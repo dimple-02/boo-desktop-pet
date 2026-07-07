@@ -2,13 +2,14 @@ import tkinter as tk
 from pathlib import Path
 from PIL import Image, ImageTk
 import random
+import os
 from datetime import datetime
 from speech import SpeechBubble
 
 WIDTH = 160
 HEIGHT = 200
 SNOOZE_INTERVAL = 10 * 60 * 1000 
-PATROL_INTERVAL = 17 * 60 * 1000
+PATROL_INTERVAL = 17 * 60 * 1000 
 
 class Boo:
     def __init__(self):
@@ -18,15 +19,15 @@ class Boo:
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
 
-        # Transparency setup
+        # Transparent framework engine setup pipelines
         self.root.config(bg="white")
         self.root.wm_attributes("-transparentcolor", "white")
 
-        # Screen boundary calculation
+        # Screen boundary calculation layout
         self.screen_w = self.root.winfo_screenwidth()
         self.screen_h = self.root.winfo_screenheight()
 
-        # Default bottom-right placement matching downscaled dimensions
+        # Default bottom-right safe target placement
         self.default_x = self.screen_w - WIDTH - 20
         self.default_y = self.screen_h - HEIGHT - 50
         
@@ -35,14 +36,23 @@ class Boo:
         # Resolve asset locations cleanly
         BASE_DIR = Path(__file__).resolve().parent.parent
         images_dir = BASE_DIR / "assets" / "images"
+        self.save_file_path = BASE_DIR / "friendship.txt"
 
-        # Image Assets Pipelines (100x100)
-        self.idle_photo = self.load_and_scale_image(images_dir / "boo_idle.png")
-        self.blink_photo = self.load_and_scale_image(images_dir / "boo_blink.png")
-        self.water_photo = self.load_and_scale_image(images_dir / "boo_water.png")
-        self.water_blink_photo = self.load_and_scale_image(images_dir / "boo_water_blink.png")
+        # Load Save State System Data Modules
+        self.level = 1
+        self.xp = 0
+        self.load_friendship_data()
 
-        # UI Core Presentation Label
+        # Image Assets Pipelines
+        self.idle_photo = self.load_and_scale_image(images_dir / "boo_idle.png", (100, 100))
+        self.blink_photo = self.load_and_scale_image(images_dir / "boo_blink.png", (100, 100))
+        self.water_photo = self.load_and_scale_image(images_dir / "boo_water.png", (100, 100))
+        self.water_blink_photo = self.load_and_scale_image(images_dir / "boo_water_blink.png", (100, 100))
+        
+        # Upscaled cloud texture framework dynamically to 160x85 for clear font spacing
+        self.bubble_bg_photo = self.load_and_scale_image(images_dir / "bubble_bg.png", (160, 85))
+
+        # UI Core Presentation Base Layer
         self.label = tk.Label(
             self.root,
             image=self.idle_photo,
@@ -54,14 +64,14 @@ class Boo:
         self.current_y = self.base_y
         self.label.place(x=30, y=self.base_y)
 
-        # Core State Engine & Flags
+        # Core State Components & Triggers
         self.speech = SpeechBubble(self.root)
         self.is_water_reminder_active = False
         self.is_patrolling = False
         self.last_reminded_hour = -1
         self.snooze_job_id = None
 
-        # Patrol tracking variables
+        # Patrol coordinate tracks
         self.patrol_x = 0
         self.patrol_y = 0
         self.patrol_step = 0
@@ -71,24 +81,66 @@ class Boo:
         self.label.bind("<B1-Motion>", self.move)
         self.label.bind("<Double-Button-1>", self.say_hi)
 
-        # Start Continuous Loops
+        # Start continuous core runtime animation timelines
         self.root.after(3000, self.blink)
         self.float_offset = 0
         self.float_direction = 1
         self.animate()
         
-        # Start Time Watchers
+        # Start Time Monitors
         self.check_time_reminders()
         self.root.after(PATROL_INTERVAL, self.schedule_next_patrol)
 
         self.root.mainloop()
 
-    def load_and_scale_image(self, path):
+    # --- Save State Progression File Control ---
+    def load_friendship_data(self):
+        if os.path.exists(self.save_file_path):
+            try:
+                with open(self.save_file_path, "r") as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        if "level:" in line:
+                            self.level = int(line.split(":")[1].strip())
+                        elif "xp:" in line:
+                            self.xp = int(line.split(":")[1].strip())
+            except:
+                self.level = 1
+                self.xp = 0
+        else:
+            self.save_friendship_data()
+
+    def save_friendship_data(self):
+        try:
+            with open(self.save_file_path, "w") as f:
+                f.write(f"level: {self.level}\n")
+                f.write(f"xp: {self.xp}\n")
+        except Exception as e:
+            print(f"Error saving progression state: {e}")
+
+    def add_xp(self, amount):
+        self.xp += amount
+        xp_needed = 100
+        
+        if self.xp >= xp_needed:
+            self.xp -= xp_needed
+            self.level += 1
+            self.save_friendship_data()
+            self.root.after(1200, lambda: self.speech.show(
+                f"🎉 LEVEL UP! 🎉\nWe are Level {self.level} now! ❤️", 
+                self.base_y, 
+                self.bubble_bg_photo,
+                is_reminder=False
+            ))
+        else:
+            self.save_friendship_data()
+
+    def load_and_scale_image(self, path, size):
         img = Image.open(path)
-        img = img.resize((100, 100), Image.LANCZOS)
+        img = img.resize(size, Image.LANCZOS)
         return ImageTk.PhotoImage(img)
 
-    # --- Anim Loops Engines ---
+    # --- Anim Control Engines Loops ---
     def blink(self):
         if self.is_water_reminder_active:
             self.label.config(image=self.water_blink_photo)
@@ -116,7 +168,7 @@ class Boo:
             self.label.place_configure(x=30, y=self.current_y)
         self.root.after(60, self.animate)
 
-    # --- Windows Drag Framework ---
+    # --- Windows Drag Interaction Framework ---
     def start_move(self, event):
         if self.is_patrolling: 
             return
@@ -136,13 +188,17 @@ class Boo:
         if self.is_water_reminder_active or self.is_patrolling:
             return
             
+        self.add_xp(2)
+        
         messages = [
-            "Hi! I'm Boo 👻", "Mini size, macro care! ✨", 
-            "Don't forget water! 💧", "Floating around smoothly~"
+            f"Hi! I'm Boo (Lv. {self.level}) 👻", 
+            f"Dosti XP: {self.xp}/100 ⭐", 
+            "Hydration is key! 💧", 
+            "Clean code wins! 💻"
         ]
-        self.speech.show(random.choice(messages), self.current_y, is_reminder=False)
+        self.speech.show(random.choice(messages), self.current_y, self.bubble_bg_photo, is_reminder=False)
 
-    # --- Real-Time Clock Reminder Engine ---
+    # --- Real-Time Clock Notifications Subsystem ---
     def check_time_reminders(self):
         now = datetime.now()
         current_hour = now.hour
@@ -155,11 +211,11 @@ class Boo:
                 self.snooze_job_id = None
                 
             self.is_patrolling = False 
-            self.trigger_water_reminder(f"Ding Dong! It's {current_hour if current_hour <= 12 else current_hour - 12} o'clock! Time to drink water! 💧")
+            self.trigger_water_reminder(f"Ding Dong! It's {current_hour if current_hour <= 12 else current_hour - 12} o'clock! Drink water! 💧")
 
         self.root.after(1000, self.check_time_reminders)
 
-    # --- Patrol Automation Loop ---
+    # --- Patrol Tracking Modules ---
     def schedule_next_patrol(self):
         if not self.is_water_reminder_active and not self.is_patrolling:
             self.start_screen_patrol()
@@ -169,16 +225,14 @@ class Boo:
         self.is_patrolling = True
         self.speech.hide()
         
-        # Force flush current window mapping variables
         self.root.update_idletasks()
-        
         self.label.place_configure(x=30, y=self.base_y)
         
         self.patrol_x = int(self.root.winfo_x())
         self.patrol_y = int(self.root.winfo_y())
         self.patrol_step = 0
         
-        self.speech.show("17-min patrol mark hit! Let's run! 🏃‍♂️💨", self.base_y, is_reminder=False)
+        self.speech.show("Patrol time! Let's walk! 🏃‍♂️💨", self.base_y, self.bubble_bg_photo, is_reminder=False)
         self.update_patrol_movement()
 
     def update_patrol_movement(self):
@@ -214,12 +268,9 @@ class Boo:
                     self.patrol_x = self.default_x
                     self.is_patrolling = False
                     self.speech.hide()
-                    self.speech.show("Done! Returning to default spot~ 😴", self.base_y, is_reminder=False)
+                    self.speech.show("Done! Spot restored~ 😴", self.base_y, self.bubble_bg_photo, is_reminder=False)
 
-        # Apply geometry configuration
         self.root.geometry(f"+{int(self.patrol_x)}+{int(self.patrol_y)}")
-        
-        # CRITICAL: Force window rendering cycle refresh instantly to prevent UI freezes on Windows OS
         self.root.update()
         
         if self.is_patrolling:
@@ -232,6 +283,7 @@ class Boo:
         self.speech.show(
             text_message, 
             self.base_y, 
+            self.bubble_bg_photo,
             is_reminder=True, 
             on_yes=self.handle_water_yes, 
             on_no=self.handle_water_no
@@ -244,7 +296,9 @@ class Boo:
         if self.snooze_job_id:
             self.root.after_cancel(self.snooze_job_id)
             self.snooze_job_id = None
-        self.speech.show("Awesome! Proud of you! ❤️✨", self.base_y, is_reminder=False)
+            
+        self.add_xp(20)
+        self.speech.show(f"Awesome! +20 XP gained! ❤️✨", self.base_y, self.bubble_bg_photo, is_reminder=False)
 
     def handle_water_no(self):
         self.speech.hide()

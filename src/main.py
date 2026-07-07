@@ -2,50 +2,47 @@ import tkinter as tk
 from pathlib import Path
 from PIL import Image, ImageTk
 import random
+from datetime import datetime
 from speech import SpeechBubble
 
-WIDTH = 200
-HEIGHT = 240
+WIDTH = 160
+HEIGHT = 200
+SNOOZE_INTERVAL = 10 * 60 * 1000 
+PATROL_INTERVAL = 17 * 60 * 1000
 
 class Boo:
     def __init__(self):
         self.root = tk.Tk()
 
-        # Remove title bar
+        # Remove title bar and stay on top
         self.root.overrideredirect(True)
-
-        # Always on top
         self.root.attributes("-topmost", True)
 
-        # Transparent background setup
+        # Transparency setup
         self.root.config(bg="white")
         self.root.wm_attributes("-transparentcolor", "white")
 
-        # Bottom-right positioning layout
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
+        # Screen boundary calculation
+        self.screen_w = self.root.winfo_screenwidth()
+        self.screen_h = self.root.winfo_screenheight()
 
-        x = screen_width - WIDTH - 20
-        y = screen_height - HEIGHT - 60
+        # Default bottom-right placement matching downscaled dimensions
+        self.default_x = self.screen_w - WIDTH - 20
+        self.default_y = self.screen_h - HEIGHT - 50
+        
+        self.root.geometry(f"{WIDTH}x{HEIGHT}+{self.default_x}+{self.default_y}")
 
-        self.root.geometry(f"{WIDTH}x{HEIGHT}+{x}+{y}")
-
-        # Resolve asset base paths cleanly
+        # Resolve asset locations cleanly
         BASE_DIR = Path(__file__).resolve().parent.parent
-        idle_path = BASE_DIR / "assets" / "images" / "boo_idle.png"
-        blink_path = BASE_DIR / "assets" / "images" / "boo_blink.png"
+        images_dir = BASE_DIR / "assets" / "images"
 
-        # Load and scale pet assets to 140x140
-        idle = Image.open(idle_path)
-        idle = idle.resize((140, 140), Image.LANCZOS)
+        # Image Assets Pipelines (100x100)
+        self.idle_photo = self.load_and_scale_image(images_dir / "boo_idle.png")
+        self.blink_photo = self.load_and_scale_image(images_dir / "boo_blink.png")
+        self.water_photo = self.load_and_scale_image(images_dir / "boo_water.png")
+        self.water_blink_photo = self.load_and_scale_image(images_dir / "boo_water_blink.png")
 
-        blink = Image.open(blink_path)
-        blink = blink.resize((140, 140), Image.LANCZOS)
-
-        self.idle_photo = ImageTk.PhotoImage(idle)
-        self.blink_photo = ImageTk.PhotoImage(blink)
-
-        # Main Pet Presentation Layer
+        # UI Core Presentation Label
         self.label = tk.Label(
             self.root,
             image=self.idle_photo,
@@ -53,81 +50,214 @@ class Boo:
             borderwidth=0,
             highlightthickness=0
         )
-
-        # Base Y ko window ke bottom ke close rakha hai taaki niche se na kate
-        self.base_y = 95
+        self.base_y = 90
         self.current_y = self.base_y
-        
-        # Centered horizontally inside the 200px window
         self.label.place(x=30, y=self.base_y)
 
-        # Initialize speech manager overlay module
+        # Core State Engine & Flags
         self.speech = SpeechBubble(self.root)
+        self.is_water_reminder_active = False
+        self.is_patrolling = False
+        self.last_reminded_hour = -1
+        self.snooze_job_id = None
 
-        # Event Wireframes
+        # Patrol tracking variables
+        self.patrol_x = 0
+        self.patrol_y = 0
+        self.patrol_step = 0
+
+        # Bindings Layout
+        self.label.bind("<Button-1>", self.start_move)
+        self.label.bind("<B1-Motion>", self.move)
         self.label.bind("<Double-Button-1>", self.say_hi)
-        self.make_draggable()
 
-        # Animation State Engines
+        # Start Continuous Loops
         self.root.after(3000, self.blink)
         self.float_offset = 0
         self.float_direction = 1
         self.animate()
+        
+        # Start Time Watchers
+        self.check_time_reminders()
+        self.root.after(PATROL_INTERVAL, self.schedule_next_patrol)
 
         self.root.mainloop()
 
-    # --- Blinking Animation Control Loops ---
+    def load_and_scale_image(self, path):
+        img = Image.open(path)
+        img = img.resize((100, 100), Image.LANCZOS)
+        return ImageTk.PhotoImage(img)
+
+    # --- Anim Loops Engines ---
     def blink(self):
-        self.label.config(image=self.blink_photo)
+        if self.is_water_reminder_active:
+            self.label.config(image=self.water_blink_photo)
+        else:
+            self.label.config(image=self.blink_photo)
         self.root.after(180, self.open_eyes)
 
     def open_eyes(self):
-        self.label.config(image=self.idle_photo)
+        if self.is_water_reminder_active:
+            self.label.config(image=self.water_photo)
+        else:
+            self.label.config(image=self.idle_photo)
         next_blink = random.randint(4000, 8000)
         self.root.after(next_blink, self.blink)
 
-    # --- Floating Bobbing Loops ---
     def animate(self):
-        self.float_offset += self.float_direction
+        if not self.is_patrolling:
+            self.float_offset += self.float_direction
+            if self.float_offset >= 5:
+                self.float_direction = -1
+            elif self.float_offset <= -5:
+                self.float_direction = 1
 
-        # Gentle floating boundary
-        if self.float_offset >= 6:
-            self.float_direction = -1
-        elif self.float_offset <= -6:
-            self.float_direction = 1
-
-        self.current_y = self.base_y + self.float_offset
-        self.label.place_configure(
-            x=30,
-            y=self.current_y
-        )
+            self.current_y = self.base_y + self.float_offset
+            self.label.place_configure(x=30, y=self.current_y)
         self.root.after(60, self.animate)
 
-    # --- Window Drag Hooks ---
-    def make_draggable(self):
-        self.label.bind("<Button-1>", self.start_move)
-        self.label.bind("<B1-Motion>", self.move)
-
+    # --- Windows Drag Framework ---
     def start_move(self, event):
+        if self.is_patrolling: 
+            return
         self.x = event.x
         self.y = event.y
 
     def move(self, event):
+        if self.is_patrolling: 
+            return
         x = self.root.winfo_x() + event.x - self.x
         y = self.root.winfo_y() + event.y - self.y
         self.root.geometry(f"+{x}+{y}")
+        self.default_x = x
+        self.default_y = y
 
-    # --- Dialogue Generation Event Callbacks ---
     def say_hi(self, event=None):
+        if self.is_water_reminder_active or self.is_patrolling:
+            return
+            
         messages = [
-            "Hi! I'm Boo 👻",
-            "You're doing amazing! 🌸",
-            "Don't forget water! 💧",
-            "I'm cheering for you! ⭐",
-            "Let's code together! 💜"
+            "Hi! I'm Boo 👻", "Mini size, macro care! ✨", 
+            "Don't forget water! 💧", "Floating around smoothly~"
         ]
-        # Boo ke current dynamic Y coordinate ko pass kiya taaki bubble uske close bane
-        self.speech.show(random.choice(messages), self.current_y)
+        self.speech.show(random.choice(messages), self.current_y, is_reminder=False)
+
+    # --- Real-Time Clock Reminder Engine ---
+    def check_time_reminders(self):
+        now = datetime.now()
+        current_hour = now.hour
+        current_minute = now.minute
+
+        if current_minute == 0 and current_hour != self.last_reminded_hour:
+            self.last_reminded_hour = current_hour
+            if self.snooze_job_id:
+                self.root.after_cancel(self.snooze_job_id)
+                self.snooze_job_id = None
+                
+            self.is_patrolling = False 
+            self.trigger_water_reminder(f"Ding Dong! It's {current_hour if current_hour <= 12 else current_hour - 12} o'clock! Time to drink water! 💧")
+
+        self.root.after(1000, self.check_time_reminders)
+
+    # --- Patrol Automation Loop ---
+    def schedule_next_patrol(self):
+        if not self.is_water_reminder_active and not self.is_patrolling:
+            self.start_screen_patrol()
+        self.root.after(PATROL_INTERVAL, self.schedule_next_patrol)
+
+    def start_screen_patrol(self):
+        self.is_patrolling = True
+        self.speech.hide()
+        
+        # Force flush current window mapping variables
+        self.root.update_idletasks()
+        
+        self.label.place_configure(x=30, y=self.base_y)
+        
+        self.patrol_x = int(self.root.winfo_x())
+        self.patrol_y = int(self.root.winfo_y())
+        self.patrol_step = 0
+        
+        self.speech.show("17-min patrol mark hit! Let's run! 🏃‍♂️💨", self.base_y, is_reminder=False)
+        self.update_patrol_movement()
+
+    def update_patrol_movement(self):
+        if not self.is_patrolling:
+            return
+
+        speed = 8
+
+        if self.patrol_step == 0:  # Move Left
+            self.patrol_x -= speed
+            if self.patrol_x <= 10:
+                self.patrol_x = 10
+                self.patrol_step = 1
+        
+        elif self.patrol_step == 1:  # Move Up
+            self.patrol_y -= speed
+            if self.patrol_y <= 10:
+                self.patrol_y = 10
+                self.patrol_step = 2
+
+        elif self.patrol_step == 2:  # Move Right
+            self.patrol_x += speed
+            max_right = self.screen_w - WIDTH - 10
+            if self.patrol_x >= max_right:
+                self.patrol_x = max_right
+                self.patrol_step = 3
+
+        elif self.patrol_step == 3:  # Move Down home
+            self.patrol_y += speed
+            if self.patrol_y >= self.default_y:
+                self.patrol_y = self.default_y
+                if self.patrol_x >= self.default_x:
+                    self.patrol_x = self.default_x
+                    self.is_patrolling = False
+                    self.speech.hide()
+                    self.speech.show("Done! Returning to default spot~ 😴", self.base_y, is_reminder=False)
+
+        # Apply geometry configuration
+        self.root.geometry(f"+{int(self.patrol_x)}+{int(self.patrol_y)}")
+        
+        # CRITICAL: Force window rendering cycle refresh instantly to prevent UI freezes on Windows OS
+        self.root.update()
+        
+        if self.is_patrolling:
+            self.root.after(16, self.update_patrol_movement)
+
+    # --- Water Reminder Section ---
+    def trigger_water_reminder(self, text_message):
+        self.is_water_reminder_active = True
+        self.label.config(image=self.water_photo)
+        self.speech.show(
+            text_message, 
+            self.base_y, 
+            is_reminder=True, 
+            on_yes=self.handle_water_yes, 
+            on_no=self.handle_water_no
+        )
+
+    def handle_water_yes(self):
+        self.speech.hide()
+        self.is_water_reminder_active = False
+        self.label.config(image=self.idle_photo)
+        if self.snooze_job_id:
+            self.root.after_cancel(self.snooze_job_id)
+            self.snooze_job_id = None
+        self.speech.show("Awesome! Proud of you! ❤️✨", self.base_y, is_reminder=False)
+
+    def handle_water_no(self):
+        self.speech.hide()
+        self.is_water_reminder_active = False
+        self.label.config(image=self.idle_photo)
+        
+        if self.snooze_job_id:
+            self.root.after_cancel(self.snooze_job_id)
+            
+        self.snooze_job_id = self.root.after(
+            SNOOZE_INTERVAL, 
+            lambda: self.trigger_water_reminder("Tumne bola tha baad mein piogi! Chalo ab piyo! 🥤👀")
+        )
 
 if __name__ == "__main__":
     Boo()

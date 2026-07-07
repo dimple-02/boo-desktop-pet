@@ -1,7 +1,7 @@
 import tkinter as tk
 from pathlib import Path
 from PIL import Image, ImageTk
-
+from speech import SpeechBubble
 WIDTH = 180
 HEIGHT = 180
 
@@ -53,7 +53,8 @@ class Boo:
         )
 
         self.label.pack(expand=True)
-
+        self.speech = SpeechBubble(self.root)
+        self.label.bind("<Double-Button-1>", self.say_hi)
         # Enable dragging
         self.make_draggable()
 
@@ -76,6 +77,7 @@ class Boo:
 
         self.root.geometry(f"+{x}+{y}")
 
-
+    def say_hi(self, event=None):
+        self.speech.show("Hi! I'm Boo 👻")
 if __name__ == "__main__":
     Boo()

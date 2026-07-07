@@ -1,7 +1,9 @@
 {
-    "friendship": 0,
-    "level": 1,
-    "outfit": "default",
-    "last_login": "",
-    "water_streak": 0
+    "friendship_xp": 14,
+    "level_id": 1,
+    "unlocked_accessories": [
+        "None"
+    ],
+    "window_x": 1120,
+    "window_y": 406
 }

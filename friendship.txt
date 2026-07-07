@@ -1,2 +1,2 @@
-level: 1
-xp: 56
+level: 2
+xp: 0

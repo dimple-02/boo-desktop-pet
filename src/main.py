@@ -4,6 +4,16 @@ from PIL import Image, ImageTk
 import random
 from datetime import datetime
 from speech import SpeechBubble
+import ctypes
+
+# Try to make Tkinter DPI aware for high resolution displays on Windows
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+except Exception:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
 
 WIDTH = 160
 HEIGHT = 200
@@ -178,8 +188,16 @@ class Boo:
         self.patrol_y = int(self.root.winfo_y())
         self.patrol_step = 0
         
+        # Show patrol speech bubble
         self.speech.show("17-min patrol mark hit! Let's run! 🏃‍♂️💨", self.base_y, is_reminder=False)
-        self.update_patrol_movement()
+        
+        # Wait 1.5 seconds for the user to read the message, then hide it and start moving
+        self.root.after(1500, self._start_movement_after_speech)
+
+    def _start_movement_after_speech(self):
+        if self.is_patrolling:
+            self.speech.hide()
+            self.update_patrol_movement()
 
     def update_patrol_movement(self):
         if not self.is_patrolling:

@@ -1,7 +1,8 @@
 import tkinter as tk
+from ui.speech_bubble import SpeechBubble
 
 class PetWindow:
-    def __init__(self, width=160, height=200, on_drag_end=None):
+    def __init__(self, width=160, height=200, on_drag_end=None, on_double_click=None):
         self.root = tk.Tk()
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
@@ -13,6 +14,7 @@ class PetWindow:
         self.width = width
         self.height = height
         self.on_drag_end = on_drag_end
+        self.on_double_click = on_double_click
 
         # Default placement: bottom right corner of the screen
         screen_w = self.root.winfo_screenwidth()
@@ -33,14 +35,18 @@ class PetWindow:
         self.base_pet_y = 90
         self.label.place(x=self.base_pet_x, y=self.base_pet_y)
 
+        # Instantiate SpeechBubble inside the root window
+        self.speech_bubble = SpeechBubble(self.root)
+
         # Dragging state
         self.drag_start_x = 0
         self.drag_start_y = 0
 
-        # Bind mouse interaction events for dragging
+        # Bind mouse interaction events for dragging and double clicking
         self.label.bind("<Button-1>", self._start_drag)
         self.label.bind("<B1-Motion>", self._drag)
         self.label.bind("<ButtonRelease-1>", self._end_drag)
+        self.label.bind("<Double-Button-1>", self._double_click)
 
     def set_image(self, photo_image):
         """Updates the label to display the given PhotoImage."""
@@ -61,6 +67,15 @@ class PetWindow:
         """Returns the current window (x, y) coordinates."""
         return self.root.winfo_x(), self.root.winfo_y()
 
+    def say(self, text, duration_ms=4000):
+        """Displays a dialogue bubble above the pet's current Y coordinate."""
+        pet_y = self.label.winfo_y()
+        self.speech_bubble.show(text, pet_y, duration_ms)
+
+    def hide_bubble(self):
+        """Hides the active dialogue bubble."""
+        self.speech_bubble.hide()
+
     def _start_drag(self, event):
         self.drag_start_x = event.x
         self.drag_start_y = event.y
@@ -75,6 +90,10 @@ class PetWindow:
     def _end_drag(self, event):
         if self.on_drag_end:
             self.on_drag_end(self.x, self.y)
+
+    def _double_click(self, event):
+        if self.on_double_click:
+            self.on_double_click()
 
     def start_loop(self):
         """Starts the main event loop."""

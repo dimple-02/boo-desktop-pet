@@ -3,15 +3,30 @@ from pathlib import Path
 from core.state_manager import StateManager
 from ui.pet_window import PetWindow
 from utils.image import load_and_scale_image
+from managers.persistence import PersistenceManager
 
 class BooApp:
     def __init__(self):
-        # Initialize state manager and UI window
+        # Initialize state manager and persistence
         self.state_manager = StateManager()
-        self.window = PetWindow()
+        self.persistence = PersistenceManager()
+
+        # Load saved settings and window coordinates
+        save_data = self.persistence.load_save_data()
+        window_x = save_data.get("window_x")
+        window_y = save_data.get("window_y")
+
+        # Initialize window and pass callbacks
+        self.window = PetWindow(
+            on_drag_end=self._on_drag_end,
+            on_double_click=self._on_double_click
+        )
+
+        # Restore saved coordinates if they exist
+        if window_x is not None and window_y is not None:
+            self.window.set_window_position(window_x, window_y)
 
         # Path resolution for base images
-        # __file__ is src/core/app.py -> parent.parent.parent is root d:/boo
         self.base_dir = Path(__file__).resolve().parent.parent.parent
         self.images_dir = self.base_dir / "assets" / "images" / "base"
 
@@ -77,6 +92,25 @@ class BooApp:
         
         # Tick float update every 60ms
         self.window.after(60, self.float_tick)
+
+    def _on_drag_end(self, x, y):
+        """Callback triggered when drag-and-drop ends. Saves position to save.json."""
+        self.persistence.save_save_data({
+            "window_x": x,
+            "window_y": y
+        })
+
+    def _on_double_click(self):
+        """Callback triggered on double-click. Displays a random greeting speech bubble."""
+        greetings = [
+            "Hiiiiii!! ✨",
+            "Boo is happy to see you! 💜",
+            "Try dragging me around! 😉",
+            "Blink... float... sleep... yawn...",
+            "What a wonderful day! 🌸"
+        ]
+        text = random.choice(greetings)
+        self.window.say(text)
 
     def run(self):
         """Starts background loops and launches the GUI event loop."""

@@ -8,7 +8,7 @@ from speech import SpeechBubble
 WIDTH = 160
 HEIGHT = 200
 SNOOZE_INTERVAL = 10 * 60 * 1000 
-PATROL_INTERVAL = 17 * 60 * 1000
+PATROL_INTERVAL = 7000
 
 class Boo:
     def __init__(self):

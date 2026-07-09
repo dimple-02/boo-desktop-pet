@@ -1,13 +1,13 @@
 # Boo Application Configuration Constants
 
-# Window dimensions
-WIDTH = 160
-HEIGHT = 200
+# Window dimensions (enlarged to prevent speech bubble clipping)
+WIDTH = 220
+HEIGHT = 260
 FPS = 60
 
 # Pet label positioning offsets within the transparent root window
-PET_X = 30
-PET_Y = 90
+PET_X = 60
+PET_Y = 150
 
 # Image scaling size
 IMAGE_SIZE = (100, 100)

@@ -1,14 +1,15 @@
 class FollowAnimation:
     def __init__(self, speed=0.08):
         self.speed = speed
-        # Offsets to align Boo's center with the mouse cursor pointer (Boo size is 160x200)
-        self.offset_x = 80
-        self.offset_y = 100
+        # Offsets to align Boo's center with the mouse cursor pointer
+        # (Window width is 220, pet X center is 110. Pet Y center is 150 + 50 = 200)
+        self.offset_x = 110
+        self.offset_y = 200
 
     def calculate_next_position(self, current_wx, current_wy, target_mx, target_my):
         """
         Calculates the next step coordinates towards the mouse position.
-        Uses a smooth LERP (Linear Interpolation) factor.
+        Uses a smooth LERP (Linear Transition) factor.
         """
         dest_x = target_mx - self.offset_x
         dest_y = target_my - self.offset_y

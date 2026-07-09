@@ -15,7 +15,7 @@ class SpeechBubble:
         )
         self.bubble.config(highlightbackground="#E2DCB9", highlightcolor="#E2DCB9")
 
-        # Label representing the text contents
+        # Label representing the text contents (increased wraplength to 180 to fit AI answers)
         self.text_label = tk.Label(
             self.bubble,
             text="",
@@ -24,7 +24,7 @@ class SpeechBubble:
             font=("Segoe UI", 9, "bold"),
             padx=12,
             pady=8,
-            wraplength=130,
+            wraplength=180,
             justify="center"
         )
         self.text_label.pack(side="top", fill="both", expand=True)

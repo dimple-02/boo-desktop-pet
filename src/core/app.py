@@ -12,20 +12,31 @@ from utils.image import load_and_scale_image
 from managers.persistence import PersistenceManager
 from managers.dialogue import DialogueManager
 from managers.stats import StatsManager
+from managers.memory import MemoryManager
+from assistant.assistant import Assistant
 from animations.float import FloatAnimation
 from animations.blink import BlinkAnimation
+from animations.follow import FollowAnimation
 
 class BooApp:
     def __init__(self):
-        # Initialize state manager, persistence, and dialogue/stats managers
+        # Initialize state manager and persistence
         self.state_manager = StateManager()
         self.persistence = PersistenceManager()
-        self.stats_manager = StatsManager(self.persistence)
-        self.dialogue_manager = DialogueManager()
 
-        # Instantiate modular animations
+        # Initialize managers
+        self.stats_manager = StatsManager(self.persistence)
+        self.memory_manager = MemoryManager(self.persistence)
+        self.dialogue_manager = DialogueManager()
+        self.assistant = Assistant(self)
+
+        # Instantiate animations
         self.float_anim = FloatAnimation(PET_Y)
         self.blink_anim = BlinkAnimation(BLINK_INTERVAL_MIN_MS, BLINK_INTERVAL_MAX_MS)
+        self.follow_anim = FollowAnimation(speed=0.08)
+
+        # Core state flags
+        self.is_following_cursor = False
 
         # Load saved settings and window coordinates
         save_data = self.persistence.load_save_data()
@@ -37,7 +48,8 @@ class BooApp:
             width=WIDTH,
             height=HEIGHT,
             on_drag_end=self._on_drag_end,
-            on_double_click=self._on_double_click
+            on_double_click=self._on_double_click,
+            on_submit=self._on_submit
         )
 
         # Restore saved coordinates if they exist
@@ -106,18 +118,52 @@ class BooApp:
 
     def float_tick(self):
         """Coordinates the smooth float/drift movement loop."""
-        # Retrieve float Y coordinates from decoupled float controller
-        current_y = self.float_anim.tick()
-        self.window.set_pet_offset(PET_X, current_y)
+        # Skip float Y-offset calculations if currently chasing the cursor
+        if not self.is_following_cursor:
+            current_y = self.float_anim.tick()
+            self.window.set_pet_offset(PET_X, current_y)
         
         # Tick float update every FLOAT_INTERVAL_MS
         self.window.after(FLOAT_INTERVAL_MS, self.float_tick)
 
+    def start_follow_cursor(self):
+        """Switches app activity state to enable smooth cursor chasing."""
+        if not self.is_following_cursor:
+            self.is_following_cursor = True
+            # Center pet Y offset inside window during active movement
+            self.window.set_pet_offset(PET_X, PET_Y)
+            self.follow_cursor_tick()
+
+    def stop_follow_cursor(self):
+        """Disables cursor chasing and returns Boo to static placement."""
+        self.is_following_cursor = False
+        self.update_sprite()
+
+    def follow_cursor_tick(self):
+        """Loop updating Boo window coordinates towards mouse cursor (60 FPS LERP)."""
+        if not self.is_following_cursor:
+            return
+
+        # Query pointer position and window coordinates
+        mx = self.window.root.winfo_pointerx()
+        my = self.window.root.winfo_pointery()
+        wx, wy = self.window.get_window_position()
+
+        # Calculate step destination coordinates
+        new_wx, new_wy = self.follow_anim.calculate_next_position(wx, wy, mx, my)
+        self.window.set_window_position(new_wx, new_wy)
+
+        # Run tick at 16ms (approx 60 updates per second)
+        self.window.after(16, self.follow_cursor_tick)
+
     def idle_dialogue_tick(self):
         """Periodically checks if Boo should speak spontaneously in the background."""
+        # Skip idle random comments if actively chasing the cursor
+        if self.is_following_cursor:
+            self.window.after(SPONTANEOUS_CHECK_INTERVAL_MS, self.idle_dialogue_tick)
+            return
+
         status = self.stats_manager.get_relationship_status()
-        
-        # Apply special neglect lonely mood override if active
         if status == "Lonely":
             self.state_manager.set_mood("Lonely")
         else:
@@ -126,7 +172,6 @@ class BooApp:
         text = self.dialogue_manager.get_dialogue(relationship_status=status, force=False)
         if text:
             self.window.say(text)
-            # Make sure we redraw Boo sprite in case state transitions triggered mood updates
             self.update_sprite()
         
         # Run tick check
@@ -145,13 +190,23 @@ class BooApp:
         self.update_sprite()
 
     def _on_double_click(self):
-        """Callback triggered on double-click. Petting adds affection and forces dialogue."""
-        # Add affection for petting
+        """Callback triggered on double-click. Petting adds affection, increments petted stats, and forces dialogue."""
         self.stats_manager.record_pat()
+        self.memory_manager.record_pet()
 
         status = self.stats_manager.get_relationship_status()
         text = self.dialogue_manager.get_dialogue(relationship_status=status, force=True)
         self.window.say(text)
+        self.update_sprite()
+
+    def _on_submit(self, text):
+        """Callback triggered when the user types and submits a chat entry to Boo."""
+        # Process query through the Assistant coordinator
+        response = self.assistant.process_input(text)
+        
+        # Display Boo's response immediately.
+        # We pass duration_ms=0 so the speech bubble stays open, allowing active back-and-forth chatting.
+        self.window.say(response, duration_ms=0)
         self.update_sprite()
 
     def run(self):
@@ -159,7 +214,7 @@ class BooApp:
         # Schedule initial loops
         self.window.after(3000, self.start_blink_loop)
         self.window.after(60, self.float_tick)
-        self.window.after(10000, self.idle_dialogue_tick) # First spontaneous check at 10 seconds
+        self.window.after(10000, self.idle_dialogue_tick)
         
         # Run main loop
         self.window.start_loop()

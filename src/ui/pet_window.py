@@ -3,7 +3,7 @@ from ui.speech_bubble import SpeechBubble
 from core.config import PET_X, PET_Y
 
 class PetWindow:
-    def __init__(self, width=160, height=200, on_drag_end=None, on_double_click=None):
+    def __init__(self, width=160, height=200, on_drag_end=None, on_double_click=None, on_submit=None):
         self.root = tk.Tk()
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
@@ -36,8 +36,8 @@ class PetWindow:
         self.base_pet_y = PET_Y
         self.label.place(x=self.base_pet_x, y=self.base_pet_y)
 
-        # Instantiate SpeechBubble inside the root window
-        self.speech_bubble = SpeechBubble(self.root)
+        # Instantiate SpeechBubble inside the root window with the submit callback
+        self.speech_bubble = SpeechBubble(self.root, on_submit=on_submit)
 
         # Dragging state
         self.drag_start_x = 0

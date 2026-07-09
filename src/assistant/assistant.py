@@ -118,7 +118,8 @@ class Assistant:
 
     def _query_gemini_ai(self, api_key, prompt):
         """Queries the Google Gemini API using native Python urllib REST calls (zero-dependency)."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        # Using gemini-2.5-flash as default (supported model in this workspace environment)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
 
         # Fetch personalized facts from memory to inject into system context
         name = self.app.memory_manager.get_fact("user_name", "friend")

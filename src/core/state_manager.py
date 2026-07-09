@@ -20,8 +20,8 @@ class StateManager:
     def get_texture_name(self):
         """
         Returns the appropriate base texture file name based on the current state.
-        For v0.1, this maps directly to boo_blink.png or boo_idle.png.
+        For v0.4, this maps to idle.png or blink.png.
         """
         if self.animation == "Blink":
-            return "boo_blink.png"
-        return "boo_idle.png"
+            return "blink.png"
+        return "idle.png"

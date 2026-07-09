@@ -1,0 +1,1 @@
+# Assistant commands package initialization.

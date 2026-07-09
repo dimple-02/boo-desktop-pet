@@ -24,13 +24,18 @@ class Assistant:
         }
 
     def _load_api_key(self):
-        """Loads GEMINI_API_KEY from environment or local .env file securely."""
-        # 1. Check system environment
+        """Loads GEMINI_API_KEY from save.json, local .env, or system environment variables."""
+        # 1. Check save.json facts (most convenient local storage, safely ignored by git)
+        key = self.app.memory_manager.get_fact("gemini_api_key")
+        if key:
+            return key
+
+        # 2. Check system environment
         key = os.environ.get("GEMINI_API_KEY")
         if key:
             return key
 
-        # 2. Check local .env file in project root
+        # 3. Check local .env file in project root
         env_path = self.app.base_dir / ".env"
         if env_path.exists():
             try:
@@ -69,7 +74,17 @@ class Assistant:
     def _process_chat(self, text):
         clean_text = text.lower().strip()
 
-        # --- 1. FACT SAVING ---
+        # --- 1. API KEY CONFIGURATION VIA CHAT ---
+        if clean_text.startswith("set key ") or clean_text.startswith("set api key "):
+            parts = text.split()
+            # The key is the last token
+            key = parts[-1].strip()
+            if key and key.lower() not in ("key", "api"):
+                # Save key in save.json via memory_manager
+                self.app.memory_manager.save_fact("gemini_api_key", key)
+                return "API key saved! My AI brain is now active! 🧠✨ Ask me anything!"
+
+        # --- 2. FACT SAVING ---
         if "my name is " in clean_text:
             idx = clean_text.find("my name is ") + len("my name is ")
             name = text[idx:].strip()
@@ -91,8 +106,8 @@ class Assistant:
                 self.app.memory_manager.save_fact("birthday", bday)
                 return f"Got it! I will remember your birthday is {bday}. 🎂"
 
-        # --- 2. HYBRID AI ASSISTANT / LOCAL FALLBACK ---
-        # Securely retrieve Gemini API Key from environment or .env
+        # --- 3. HYBRID AI ASSISTANT / LOCAL FALLBACK ---
+        # Securely retrieve Gemini API Key (looks in save.json first, then system, then .env)
         api_key = self._load_api_key()
 
         if api_key:
@@ -162,7 +177,7 @@ class Assistant:
                 return "I couldn't process that. 🥺"
         except urllib.error.HTTPError as e:
             print(f"[Gemini API Error] Code: {e.code}")
-            return "I'm having trouble with my API key. Please check your .env configuration. 🥺"
+            return "I'm having trouble with my API key. Please check your config using 'set key YOUR_KEY'. 🥺"
         except Exception as e:
             print(f"[Gemini API Exception] {e}")
             return "I'm having trouble connecting to my AI brain. Are you connected to the internet? 🌐"
@@ -237,8 +252,8 @@ class Assistant:
 
         # General Fallback + AI instruction promo
         responses = [
-            "I'm listening! 👻 (Configure GEMINI_API_KEY in your .env file to enable my AI brain!)",
-            "Tell me more, buddy. (You can enable my AI brain by adding your key to .env!)",
+            "I'm listening! 👻 (Type 'set key YOUR_GEMINI_KEY' to activate my AI brain!)",
+            "Tell me more, buddy. (You can enable my AI brain by typing 'set key YOUR_GEMINI_KEY'!)",
             "You are doing great! Let's keep focusing. 💜",
             "Try asking me 'how long have we been together' or ask me to 'follow'!"
         ]

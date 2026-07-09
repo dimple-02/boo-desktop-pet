@@ -33,9 +33,10 @@ class SpeechBubble:
         self.input_frame = tk.Frame(self.bubble, bg="#FFFDF3")
         self.input_frame.pack(side="bottom", fill="x", padx=4, pady=(0, 4))
 
+        # Using off-white "#FFFFFE" to avoid the transparent color ("white") key collision!
         self.entry = tk.Entry(
             self.input_frame,
-            bg="white",
+            bg="#FFFFFE",
             fg="#2C3E50",
             font=("Segoe UI", 8),
             bd=1,
@@ -66,6 +67,7 @@ class SpeechBubble:
         # Event bindings
         self.entry.bind("<Return>", self._on_submit)
         self.entry.bind("<FocusIn>", self._cancel_hide_timer)
+        self.entry.bind("<Button-1>", self._on_entry_click)
 
     def show(self, text, pet_y, duration_ms=4000):
         """
@@ -93,6 +95,10 @@ class SpeechBubble:
         """Hides the speech bubble frame from the window geometry layout."""
         self.bubble.place_forget()
         self._cancel_hide_timer()
+
+    def _on_entry_click(self, event=None):
+        """Forces focus when clicked to bypass OS overrideredirect restrictions."""
+        self.entry.focus_force()
 
     def _on_submit(self, event=None):
         """Processes user text input and triggers callback."""

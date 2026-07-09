@@ -80,6 +80,8 @@ class PetWindow:
     def _start_drag(self, event):
         self.drag_start_x = event.x
         self.drag_start_y = event.y
+        # Force OS input focus to this window on click
+        self.root.focus_force()
 
     def _drag(self, event):
         new_x = self.root.winfo_x() + event.x - self.drag_start_x
@@ -93,6 +95,8 @@ class PetWindow:
             self.on_drag_end(self.x, self.y)
 
     def _double_click(self, event):
+        # Force OS input focus to this window on double click
+        self.root.focus_force()
         if self.on_double_click:
             self.on_double_click()
 

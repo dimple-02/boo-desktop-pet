@@ -5,7 +5,8 @@
 __pycache__/
 *.pyc
 
-# Local User Data & Settings (prevents pushing personal statistics, logs, or window coordinates)
+# Local Credentials & User Data (strictly gitignored for security)
+.env
 data/
 *.log
 

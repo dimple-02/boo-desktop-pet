@@ -23,6 +23,28 @@ class Assistant:
             "search": SearchCommand(app)
         }
 
+    def _load_api_key(self):
+        """Loads GEMINI_API_KEY from environment or local .env file securely."""
+        # 1. Check system environment
+        key = os.environ.get("GEMINI_API_KEY")
+        if key:
+            return key
+
+        # 2. Check local .env file in project root
+        env_path = self.app.base_dir / ".env"
+        if env_path.exists():
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#"):
+                            parts = line.split("=", 1)
+                            if len(parts) == 2 and parts[0].strip() == "GEMINI_API_KEY":
+                                return parts[1].strip()
+            except Exception as e:
+                print(f"[Assistant] Error reading .env file: {e}")
+        return None
+
     def process_input(self, text):
         """
         Receives user text input, parses it for commands or processes it as a chat dialog,
@@ -47,16 +69,7 @@ class Assistant:
     def _process_chat(self, text):
         clean_text = text.lower().strip()
 
-        # --- 1. API KEY CONFIGURATION ---
-        if clean_text.startswith("set key ") or clean_text.startswith("set api key "):
-            parts = text.split()
-            # The key is the last token
-            key = parts[-1].strip()
-            if key and key != "key":
-                self.app.memory_manager.save_fact("gemini_api_key", key)
-                return "API key saved! My AI brain is now active! 🧠✨ Ask me anything!"
-
-        # --- 2. FACT SAVING ---
+        # --- 1. FACT SAVING ---
         if "my name is " in clean_text:
             idx = clean_text.find("my name is ") + len("my name is ")
             name = text[idx:].strip()
@@ -78,9 +91,9 @@ class Assistant:
                 self.app.memory_manager.save_fact("birthday", bday)
                 return f"Got it! I will remember your birthday is {bday}. 🎂"
 
-        # --- 3. HYBRID AI ASSISTANT / LOCAL FALLBACK ---
-        # Retrieve Gemini API Key from memory or env
-        api_key = self.app.memory_manager.get_fact("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
+        # --- 2. HYBRID AI ASSISTANT / LOCAL FALLBACK ---
+        # Securely retrieve Gemini API Key from environment or .env
+        api_key = self._load_api_key()
 
         if api_key:
             return self._query_gemini_ai(api_key, text)
@@ -148,9 +161,8 @@ class Assistant:
                         return parts[0].get("text", "").strip()
                 return "I couldn't process that. 🥺"
         except urllib.error.HTTPError as e:
-            # Handle invalid API key or bad request errors gracefully
             print(f"[Gemini API Error] Code: {e.code}")
-            return "I'm having trouble with my API key. Double check it or re-enter it using 'set key YOUR_KEY'. 🥺"
+            return "I'm having trouble with my API key. Please check your .env configuration. 🥺"
         except Exception as e:
             print(f"[Gemini API Exception] {e}")
             return "I'm having trouble connecting to my AI brain. Are you connected to the internet? 🌐"
@@ -225,8 +237,8 @@ class Assistant:
 
         # General Fallback + AI instruction promo
         responses = [
-            "I'm listening! 👻 (Type 'set key YOUR_GEMINI_KEY' to activate my AI brain!)",
-            "Tell me more, buddy. (You can enable my AI brain with: 'set key YOUR_GEMINI_KEY'!)",
+            "I'm listening! 👻 (Configure GEMINI_API_KEY in your .env file to enable my AI brain!)",
+            "Tell me more, buddy. (You can enable my AI brain by adding your key to .env!)",
             "You are doing great! Let's keep focusing. 💜",
             "Try asking me 'how long have we been together' or ask me to 'follow'!"
         ]

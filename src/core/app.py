@@ -49,7 +49,8 @@ class BooApp:
             height=HEIGHT,
             on_drag_end=self._on_drag_end,
             on_double_click=self._on_double_click,
-            on_submit=self._on_submit
+            on_submit=self._on_submit,
+            on_toggle_input=self._on_toggle_input
         )
 
         # Restore saved coordinates if they exist
@@ -171,7 +172,8 @@ class BooApp:
 
         text = self.dialogue_manager.get_dialogue(relationship_status=status, force=False)
         if text:
-            self.window.say(text)
+            # Standard random dialogue does not show chat input
+            self.window.say(text, show_input=False)
             self.update_sprite()
         
         # Run tick check
@@ -190,14 +192,19 @@ class BooApp:
         self.update_sprite()
 
     def _on_double_click(self):
-        """Callback triggered on double-click. Petting adds affection, increments petted stats, and forces dialogue."""
+        """Callback triggered on double-click. Petting adds affection, increments petted stats, and forces standard dialogue."""
         self.stats_manager.record_pat()
         self.memory_manager.record_pet()
 
         status = self.stats_manager.get_relationship_status()
         text = self.dialogue_manager.get_dialogue(relationship_status=status, force=True)
-        self.window.say(text)
+        # Double click dialogue fades normally without showing the input field
+        self.window.say(text, duration_ms=4000, show_input=False)
         self.update_sprite()
+
+    def _on_toggle_input(self):
+        """Callback when user triggers Shift+T shortcut. Opens input chat bubble."""
+        self.window.show_chat_input()
 
     def _on_submit(self, text):
         """Callback triggered when the user types and submits a chat entry to Boo."""
@@ -205,8 +212,8 @@ class BooApp:
         response = self.assistant.process_input(text)
         
         # Display Boo's response immediately.
-        # We pass duration_ms=0 so the speech bubble stays open, allowing active back-and-forth chatting.
-        self.window.say(response, duration_ms=0)
+        # We pass duration_ms=0 and show_input=True to keep the chat loop open for further inputs.
+        self.window.say(response, duration_ms=0, show_input=True)
         self.update_sprite()
 
     def run(self):

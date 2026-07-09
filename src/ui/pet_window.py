@@ -3,7 +3,7 @@ from ui.speech_bubble import SpeechBubble
 from core.config import PET_X, PET_Y
 
 class PetWindow:
-    def __init__(self, width=160, height=200, on_drag_end=None, on_double_click=None, on_submit=None):
+    def __init__(self, width=160, height=200, on_drag_end=None, on_double_click=None, on_submit=None, on_toggle_input=None):
         self.root = tk.Tk()
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
@@ -16,6 +16,7 @@ class PetWindow:
         self.height = height
         self.on_drag_end = on_drag_end
         self.on_double_click = on_double_click
+        self.on_toggle_input = on_toggle_input
 
         # Default placement: bottom right corner of the screen
         screen_w = self.root.winfo_screenwidth()
@@ -49,6 +50,10 @@ class PetWindow:
         self.label.bind("<ButtonRelease-1>", self._end_drag)
         self.label.bind("<Double-Button-1>", self._double_click)
 
+        # Bind Shift+T keyboard shortcut globally to toggle input entry box
+        self.root.bind_all("<Shift-T>", lambda e: self._trigger_toggle_input())
+        self.root.bind_all("<Shift-t>", lambda e: self._trigger_toggle_input())
+
     def set_image(self, photo_image):
         """Updates the label to display the given PhotoImage."""
         self.label.config(image=photo_image)
@@ -68,10 +73,15 @@ class PetWindow:
         """Returns the current window (x, y) coordinates."""
         return self.root.winfo_x(), self.root.winfo_y()
 
-    def say(self, text, duration_ms=4000):
+    def say(self, text, duration_ms=4000, show_input=False):
         """Displays a dialogue bubble above the pet's current Y coordinate."""
         pet_y = self.label.winfo_y()
-        self.speech_bubble.show(text, pet_y, duration_ms)
+        self.speech_bubble.show(text, pet_y, duration_ms, show_input)
+
+    def show_chat_input(self):
+        """Forces the speech bubble to show the text entry input frame."""
+        pet_y = self.label.winfo_y()
+        self.speech_bubble.show_chat_input(pet_y)
 
     def hide_bubble(self):
         """Hides the active dialogue bubble."""
@@ -99,6 +109,11 @@ class PetWindow:
         self.root.focus_force()
         if self.on_double_click:
             self.on_double_click()
+
+    def _trigger_toggle_input(self):
+        """Internal handler to execute the input toggle callback."""
+        if self.on_toggle_input:
+            self.on_toggle_input()
 
     def start_loop(self):
         """Starts the main event loop."""

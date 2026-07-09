@@ -29,11 +29,10 @@ class SpeechBubble:
         )
         self.text_label.pack(side="top", fill="both", expand=True)
 
-        # Input box subframe at the bottom
+        # Input box subframe at the bottom (collapsed by default)
         self.input_frame = tk.Frame(self.bubble, bg="#FFFDF3")
-        self.input_frame.pack(side="bottom", fill="x", padx=4, pady=(0, 4))
 
-        # Using off-white "#FFFFFE" to avoid the transparent color ("white") key collision!
+        # Off-white Entry to avoid the transparent color ("white") key collision!
         self.entry = tk.Entry(
             self.input_frame,
             bg="#FFFFFE",
@@ -69,16 +68,20 @@ class SpeechBubble:
         self.entry.bind("<FocusIn>", self._cancel_hide_timer)
         self.entry.bind("<Button-1>", self._on_entry_click)
 
-    def show(self, text, pet_y, duration_ms=4000):
+    def show(self, text, pet_y, duration_ms=4000, show_input=False):
         """
-        Displays the speech bubble with the given text placed dynamically
-        above the pet's current Y coordinate.
+        Displays the speech bubble with the given text.
+        If show_input is True, packs the input frame and forces focus.
+        Otherwise, hides the input frame and schedules auto-hide.
         """
-        # Cancel any pending auto-hide timers
         self._cancel_hide_timer()
-
         self.text_label.config(text=text)
         
+        if show_input:
+            self.input_frame.pack(side="bottom", fill="x", padx=4, pady=(0, 4))
+        else:
+            self.input_frame.pack_forget()
+
         # Trigger geometry calculations to obtain winfo_reqheight
         self.bubble.update_idletasks()
         bubble_height = self.bubble.winfo_reqheight()
@@ -87,9 +90,28 @@ class SpeechBubble:
         bubble_y = pet_y - bubble_height - 6
         self.bubble.place(relx=0.5, y=bubble_y, anchor="n")
 
-        # Schedule auto-hide if a duration is specified and user is not focusing on the entry
-        if duration_ms > 0 and self.root.focus_get() != self.entry:
+        if show_input:
+            self.entry.focus_force()
+        elif duration_ms > 0:
             self.hide_job = self.root.after(duration_ms, self.hide)
+
+    def show_chat_input(self, pet_y):
+        """Displays the speech bubble with the input entry box visible and focused."""
+        self._cancel_hide_timer()
+
+        # If the bubble is not currently showing, set default helper text
+        if not self.bubble.winfo_manager():
+            self.text_label.config(text="How can I help? 👻")
+            
+        self.input_frame.pack(side="bottom", fill="x", padx=4, pady=(0, 4))
+        
+        # Trigger layout updates
+        self.bubble.update_idletasks()
+        bubble_height = self.bubble.winfo_reqheight()
+        bubble_y = pet_y - bubble_height - 6
+        self.bubble.place(relx=0.5, y=bubble_y, anchor="n")
+        
+        self.entry.focus_force()
 
     def hide(self):
         """Hides the speech bubble frame from the window geometry layout."""

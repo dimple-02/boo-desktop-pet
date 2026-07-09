@@ -128,7 +128,7 @@ class Assistant:
 
         system_instruction = (
             "You are Boo, a cute little desktop pet ghost helper.\n"
-            "Keep replies very short (under 2 sentences) and cute, using ghost emojis (👻, 💜).\n"
+            "Keep replies very short (under 2 sentences) and cute, using ghost emojis (#f, #c).\n"
             f"The user's name is {name}.\n"
             f"Their favorite color is {color}.\n"
             f"Their birthday is {bday}.\n"
@@ -178,6 +178,8 @@ class Assistant:
                 return "I couldn't process that. 🥺"
         except urllib.error.HTTPError as e:
             print(f"[Gemini API Error] Code: {e.code}")
+            if e.code == 429:
+                return "I'm resting my brain for a moment (Rate Limit Exceeded). Please wait a minute before asking again! 😴"
             return "I'm having trouble with my API key. Please check your config using 'set key YOUR_KEY'. 🥺"
         except Exception as e:
             print(f"[Gemini API Exception] {e}")

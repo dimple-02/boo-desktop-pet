@@ -1,3 +1,20 @@
+# Python Virtual Environment
 .venv/
+
+# Python caching
 __pycache__/
 *.pyc
+
+# Local User Data & Settings (prevents pushing personal statistics, logs, or window coordinates)
+data/
+*.log
+
+# IDE & Editor configurations
+.vscode/
+.idea/
+.project
+.pydevproject
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

@@ -3,5 +3,10 @@
     "level": 1,
     "outfit": "default",
     "last_login": "",
-    "water_streak": 0
+    "water_streak": 0,
+    "trust": 0.0,
+    "affection": 97.0,
+    "last_seen": 1783768236.4044576,
+    "window_x": 1234,
+    "window_y": 534
 }
